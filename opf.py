@@ -75,6 +75,8 @@ def book_info_to_xml(book_info):
             xml_key = "subject"
         elif "publishedDate" in key:
             xml_key = "date"
+        elif "tags" == key:
+            xml_key = "tag"
         elif "isbn" == key:
             xml_key = "identifier"
             postfix = ' ns0:scheme="ISBN"'
