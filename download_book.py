@@ -11,7 +11,7 @@ try:
 except ImportError:
     import http.cookiejar as cookielib
 import json
-from requests.utils import dict_from_cookiejar, cookiejar_from_dict
+from requests.utils import cookiejar_from_dict
 
 logger = logging.getLogger(__name__)
 LITRES_DOMAIN_NAME = "litres.ru"
@@ -33,7 +33,7 @@ def get_headers(browser):
 
 
 def download_mp3(url, path, filename, cookies, headers):
-    print(f"Загрузка файла: {url}")
+    logger.info(f"Загрузка файла: {url}")
     full_filename = Path(path) / sanitize_filename(filename)
 
     res = requests.get(url, stream=True, cookies=cookies, headers=headers)
@@ -119,7 +119,7 @@ def download_book(url, output, browser, cookies):
     book_info = get_book_info(res.json()["payload"]["data"])
     logger.debug(f"Получена информация о книге: {book_info['title']}")
     book_folder = get_book_folder(output, book_info)
-    print(f"Загрузка файлов в каталог: {book_folder}")
+    logger.info(f"Загрузка файлов в каталог: {book_folder}")
 
     # Список файлов для загрузки
     url_string = url_string + "/files/grouped"

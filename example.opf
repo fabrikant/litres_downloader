@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<package unique-identifier="bookid"
+    xmlns:opf="http://www.online-convert.com"
+    xmlns:asd="http://www.online-convert.com">
+
+    <metadata>
+        <dc-metadata xmlns:dc="http://www.online-convert.com"
+            xmlns:oebpackage="http://www.online-convert.com">
+            <dc:Title>OPF test file</dc:Title>
+            <dc:Language>en-us</dc:Language>
+            <dc:identifier id="BookId" opf:scheme="uuid">urn:uuid:###</dc:identifier>
+            <dc:Creator>www.Online-Convert.com</dc:Creator>
+            <dc:Publisher>www.Online-Convert.com</dc:Publisher>
+            <dc:Subject BASICCode="test123">TEST / testfiles</dc:Subject>
+            <dc:Description>Purpose: Provide example of this file type; Document file type: OPF; Version: 1.0</dc:Description>
+            <dc:date>2016</dc:date>
+        </dc-metadata>
+        <x-metadata>
+            <embeddedcover>nature.jpg</embeddedcover>
+        </x-metadata>
+    </metadata>
+
+    <manifest>
+        <item id="page" media-type="text/x-oeb1-document" href="example.html" />
+        <item id="my_cover_image" media-type="image/jpeg" href="nature.jpg" />
+        <item id="ncx" media-type="application/x-dtbncx+xml" href="example.ncx" />
+    </manifest>
+
+    <spine toc="ncx">
+        <itemref idref="my_cover_image"/>
+        <itemref idref="page"/>
+    </spine>
+
+    <guide>
+        <reference type="toc" title="Table of Contents" href="example.html#toc" />
+        <reference type="text" title="Start" href="example.html#start" />
+    </guide>
+
+</package>

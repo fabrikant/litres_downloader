@@ -141,4 +141,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.info(args)
     create_cookies(args.user, args.password, args.browser, args.cookies_file)
-    # litres202412@n-drive.cf', 'fiix9Ai7Aev3Iej6koo5'
