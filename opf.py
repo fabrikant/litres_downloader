@@ -67,10 +67,10 @@ def book_info_to_xml(book_info):
         postfix = ""
         if "authors" in key:
             xml_key = "creator"
-            postfix = ' ns0:role="aut"'
+            postfix = ' opf:role="aut"'
         elif "narrator" in key:
             xml_key = "creator"
-            postfix = ' ns0:role="nrt"'
+            postfix = ' opf:role="nrt"'
         elif "genres" in key:
             xml_key = "subject"
         elif "publishedDate" in key:
@@ -84,11 +84,11 @@ def book_info_to_xml(book_info):
         elif "series_num" == key:
             xml_key = "meta"
             prefix = "ns0:"
-            postfix = ' name="calibre:series"'
+            postfix = f' name="calibre:series" content="{book_info[key]}"'
         elif "series" == key:
             xml_key = "meta"
             prefix = "ns0:"
-            postfix = ' name="calibre:series_index"'
+            postfix = f' name="calibre:series_index" content="{book_info[key]}"'
 
         if type(book_info[key]) == type([]):
             for value in book_info[key]:
