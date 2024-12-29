@@ -5,7 +5,9 @@ import logging
 from pathlib import Path
 from fake_useragent import UserAgent
 from tqdm import tqdm
-
+import shutil
+from json2xml import json2xml
+import re
 try:
     import cookielib
 except ImportError:
@@ -15,6 +17,7 @@ from requests.utils import cookiejar_from_dict
 
 logger = logging.getLogger(__name__)
 LITRES_DOMAIN_NAME = "litres.ru"
+CLEANR = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
 api_url = f"https://api.{LITRES_DOMAIN_NAME}/foundation/api/arts/"
 
 
@@ -54,27 +57,52 @@ def download_mp3(url, path, filename, cookies, headers):
         logger.error(f"code: {res.status_code} При загрузке с адреса: {url}")
 
 
+# Переворачиваем фамилию имя
+def if_to_fi(person_if):
+    split = person_if.split()
+    if len(split) == 2:
+        return f"{split[1]} {split[0]}"
+    if len(split) == 3:
+        return f"{split[2]} {split[0]} {split[1]}"
+    else:
+        return person_if
+
+
 def get_book_info(json_data):
     book_info = {
         "title": "",
         "author": "",
-        "reader": "",
+        "authors": [],
+        "narrator": "",
+        "narrators": [],
         "series": "",
         "series_count": 0,
         "series_num": 0,
+        "genres": [],
+        "cover": "",
+        "tags": [],
+        "desription": "",
+        "isbn": "",
+        "publishedYear": "",
+        "publishedDate": "",
     }
     book_info["title"] = json_data["title"]
 
     for person_info in json_data["persons"]:
-        if person_info["role"] == "author" and book_info["author"] == "":
-            book_info["author"] = person_info["full_name"]
-            author_split = book_info["author"].split()
-            # Переворачиваем фамилию имя
-            if len(author_split) == 2:
-                book_info["author"] = f"{author_split[1]} {author_split[0]}"
 
-        if person_info["role"] == "reader" and book_info["reader"] == "":
-            book_info["reader"] = person_info["full_name"]
+        person_name = if_to_fi(person_info["full_name"])
+        if person_info["role"] == "author":
+            book_info["authors"].append(person_name)
+            if book_info["author"] == "":
+                book_info["author"] = person_name
+
+        if person_info["role"] == "reader":
+            book_info["narrators"].append(person_name)
+            if book_info["narrator"] == "":
+                book_info["narrator"] = person_name
+
+    for genre in json_data["genres"]:
+        book_info["genres"].append(genre["name"])
 
     for series_info in json_data["series"]:
         if "name" in series_info and series_info["name"] != None:
@@ -85,6 +113,16 @@ def get_book_info(json_data):
             book_info["series_num"] = series_info["art_order"]
         break
 
+    for tag in json_data["tags"]:
+        book_info["tags"].append(tag["name"])
+
+    book_info["cover"] = json_data["cover_url"]
+    book_info["description"] =  re.sub(CLEANR, '', json_data["html_annotation"])
+    book_info["isbn"] = json_data["isbn"]
+    book_info["publishedYear"] = json_data["publication_date"].split("-")[0]
+    book_info["publishedDate"] = json_data["publication_date"]
+    book_info["uuid"] = json_data["uuid"]
+    
     return book_info
 
 
@@ -106,6 +144,21 @@ def get_book_folder(output, book_info):
     return book_folder
 
 
+def download_cover(book_folder, book_info):
+    filename = Path(book_folder) / "cover.jpg"
+    res = requests.get(f'https://{LITRES_DOMAIN_NAME}{book_info["cover"]}', stream=True)
+    if res.status_code == 200:
+        res.raw.decode_content = True
+        with open(filename, "wb") as f:
+            shutil.copyfileobj(res.raw, f)
+
+
+def create_metadata_file(book_folder, book_info):
+    filename = Path(book_folder) / 'metadata.opf'
+    xml = json2xml.Json2xml(book_info).to_xml()
+    Path(filename).write_text(xml)
+    
+ 
 def download_book(url, output, browser, cookies):
     headers = get_headers(browser)
     book_id = url.split("-")[-1].split("/")[0]
@@ -121,6 +174,11 @@ def download_book(url, output, browser, cookies):
     book_folder = get_book_folder(output, book_info)
     logger.info(f"Загрузка файлов в каталог: {book_folder}")
 
+    # Загрузка обложки
+    download_cover(book_folder, book_info)
+    # Формирование файла метаданных
+    create_metadata_file(book_folder, book_info)
+    
     # Список файлов для загрузки
     url_string = url_string + "/files/grouped"
     res = requests.get(url_string, cookies=cookies, headers=headers)
