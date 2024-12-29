@@ -61,8 +61,8 @@ def book_info_to_xml(book_info):
         if type(book_info[key]) == type([]):
             for value in book_info[key]:
                 xml_key = key
-                if 's' in xml_key[-1]:
-                    xml_key = xml_key[:-1]
+                # if 's' in xml_key[-1]:
+                #     xml_key = xml_key[:-1]
                 xml += xml_element(xml_key, value)
         else:
             xml += xml_element(key, book_info[key])
