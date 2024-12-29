@@ -83,7 +83,7 @@ def get_book_info(json_data):
         "genres": [],
         "cover": json_data["cover_url"],
         "tags": [],
-        "desription": re.sub(CLEANR, "", json_data["html_annotation"]),
+        "description": re.sub(CLEANR, "", json_data["html_annotation"]),
         "isbn": json_data["isbn"],
         "publishedYear": json_data["publication_date"].split("-")[0],
         "publishedDate": json_data["publication_date"],

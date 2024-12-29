@@ -41,15 +41,15 @@
 # "genres": [],
 # "cover": json_data["cover_url"],
 # "tags": [],
-# "desription": re.sub(CLEANR, "", json_data["html_annotation"]),
+# "description": re.sub(CLEANR, "", json_data["html_annotation"]),
 # "isbn": json_data["isbn"],
 # "publishedYear": json_data["publication_date"].split("-")[0],
 # "publishedDate": json_data["publication_date"],
 # "uuid": json_data["uuid"],
 
 
-def xml_element(name, value, prefix="dc:"):
-    return f"   <{prefix}{name}>{value}</{prefix}{name}>\n"
+def xml_element(name, value, prefix="dc:", postfix=""):
+    return f"   <{prefix}{name}{postfix}>{value}</{prefix}{name}>\n"
 
 
 def book_info_to_xml(book_info):
@@ -58,14 +58,43 @@ def book_info_to_xml(book_info):
 	<ns0:metadata>'
 
     for key in book_info:
+
+        if "author" == key or "narrator" == key:
+            continue
+
+        xml_key = key
+        prefix = "dc:"
+        postfix = ""
+        if "authors" in key:
+            xml_key = "creator"
+            postfix = ' ns0:role="aut"'
+        elif "narrator" in key:
+            xml_key = "creator"
+            postfix = ' ns0:role="nrt"'
+        elif "genres" in key:
+            xml_key = "subject"
+        elif "publishedDate" in key:
+            xml_key = "date"
+        elif "isbn" == key:
+            xml_key = "identifier"
+            postfix = ' ns0:scheme="ISBN"'
+        elif "id" == key:
+            xml_key = "identifier"
+            postfix = ' ns0:scheme="ASIN"'
+        elif "series_num" == key:
+            xml_key = "meta"
+            prefix = "ns0:"
+            postfix = ' name="calibre:series"'
+        elif "series" == key:
+            xml_key = "meta"
+            prefix = "ns0:"
+            postfix = ' name="calibre:series_index"'
+
         if type(book_info[key]) == type([]):
             for value in book_info[key]:
-                xml_key = key
-                # if 's' in xml_key[-1]:
-                #     xml_key = xml_key[:-1]
-                xml += xml_element(xml_key, value)
+                xml += xml_element(xml_key, value, prefix=prefix, postfix=postfix)
         else:
-            xml += xml_element(key, book_info[key])
+            xml += xml_element(xml_key, book_info[key], prefix=prefix, postfix=postfix)
 
     xml += "</ns0:metadata> </ns0:package>"
 
