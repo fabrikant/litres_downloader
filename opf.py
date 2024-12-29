@@ -28,10 +28,6 @@
 # </ns0:package>
 # """
 
-
-
-
-
 def xml_element(name, value, prefix="dc:", postfix=""):
     return f"   <{prefix}{name}{postfix}>{value}</{prefix}{name}>\n"
 
