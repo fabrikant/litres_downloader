@@ -1,4 +1,3 @@
-browsercookie
 requests
 pathvalidate
 fake-useragent
@@ -9,3 +8,4 @@ blinker==1.7.0
 selenium
 selenium_wire
 webdriver_manager
+setuptools
