@@ -7,7 +7,7 @@
 # 		<dc:creator ns0:role="nrt">zespół lektorów</dc:creator>
 # 		<dc:date />
 # 		<dc:publisher />
-# 		<dc:identifier ns0:scheme="ISBN" />
+# 		<dc:identifier opf:scheme="ISBN" />
 # 		<dc:description>
 # Świat nie zginął i nie spłonął. Przynajmniej nie cały.
 # Ale i tak było wesoło.
@@ -29,23 +29,7 @@
 # """
 
 
-# "id": json_data["id"],
-# "title": json_data["title"],
-# "author": "",
-# "authors": [],
-# "narrator": "",
-# "narrators": [],
-# "series": "",
-# "series_count": 0,
-# "series_num": 0,
-# "genres": [],
-# "cover": json_data["cover_url"],
-# "tags": [],
-# "description": re.sub(CLEANR, "", json_data["html_annotation"]),
-# "isbn": json_data["isbn"],
-# "publishedYear": json_data["publication_date"].split("-")[0],
-# "publishedDate": json_data["publication_date"],
-# "uuid": json_data["uuid"],
+
 
 
 def xml_element(name, value, prefix="dc:", postfix=""):
@@ -79,10 +63,10 @@ def book_info_to_xml(book_info):
             xml_key = "tag"
         elif "isbn" == key:
             xml_key = "identifier"
-            postfix = ' ns0:scheme="ISBN"'
+            postfix = ' opf:scheme="ISBN"'
         elif "id" == key:
             xml_key = "identifier"
-            postfix = ' ns0:scheme="ASIN"'
+            postfix = ' opf:scheme="ASIN"'
         elif "series_num" == key:
             xml_key = "meta"
             prefix = "ns0:"
