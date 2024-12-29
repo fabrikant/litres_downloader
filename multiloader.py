@@ -21,7 +21,7 @@ def download_books(input, output, browser, cookies):
 if __name__ == "__main__":
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        level=logging.ERROR,
+        level=logging.INFO,
     )
     parser = argparse.ArgumentParser(
         description="Загрузчик аудиокниг доступных по подписке с сайта litres.ru. \n Прежде чем использовать скрипт, небходимо в браузере залогиниться на сайте. \n Загрузчик использует cookies из браузера."

@@ -9,4 +9,3 @@ selenium
 selenium_wire
 webdriver_manager
 setuptools
-json2xml

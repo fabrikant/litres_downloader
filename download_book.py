@@ -6,8 +6,9 @@ from pathlib import Path
 from fake_useragent import UserAgent
 from tqdm import tqdm
 import shutil
-from json2xml import json2xml
+from opf import book_info_to_xml
 import re
+
 try:
     import cookielib
 except ImportError:
@@ -17,7 +18,7 @@ from requests.utils import cookiejar_from_dict
 
 logger = logging.getLogger(__name__)
 LITRES_DOMAIN_NAME = "litres.ru"
-CLEANR = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
 api_url = f"https://api.{LITRES_DOMAIN_NAME}/foundation/api/arts/"
 
 
@@ -70,7 +71,8 @@ def if_to_fi(person_if):
 
 def get_book_info(json_data):
     book_info = {
-        "title": "",
+        "id": json_data["id"],
+        "title": json_data["title"],
         "author": "",
         "authors": [],
         "narrator": "",
@@ -79,14 +81,14 @@ def get_book_info(json_data):
         "series_count": 0,
         "series_num": 0,
         "genres": [],
-        "cover": "",
+        "cover": json_data["cover_url"],
         "tags": [],
-        "desription": "",
-        "isbn": "",
-        "publishedYear": "",
-        "publishedDate": "",
+        "desription": re.sub(CLEANR, "", json_data["html_annotation"]),
+        "isbn": json_data["isbn"],
+        "publishedYear": json_data["publication_date"].split("-")[0],
+        "publishedDate": json_data["publication_date"],
+        "uuid": json_data["uuid"],
     }
-    book_info["title"] = json_data["title"]
 
     for person_info in json_data["persons"]:
 
@@ -116,13 +118,6 @@ def get_book_info(json_data):
     for tag in json_data["tags"]:
         book_info["tags"].append(tag["name"])
 
-    book_info["cover"] = json_data["cover_url"]
-    book_info["description"] =  re.sub(CLEANR, '', json_data["html_annotation"])
-    book_info["isbn"] = json_data["isbn"]
-    book_info["publishedYear"] = json_data["publication_date"].split("-")[0]
-    book_info["publishedDate"] = json_data["publication_date"]
-    book_info["uuid"] = json_data["uuid"]
-    
     return book_info
 
 
@@ -154,11 +149,11 @@ def download_cover(book_folder, book_info):
 
 
 def create_metadata_file(book_folder, book_info):
-    filename = Path(book_folder) / 'metadata.opf'
-    xml = json2xml.Json2xml(book_info).to_xml()
+    filename = Path(book_folder) / "metadata.opf"
+    xml = book_info_to_xml(book_info)
     Path(filename).write_text(xml)
-    
- 
+
+
 def download_book(url, output, browser, cookies):
     headers = get_headers(browser)
     book_id = url.split("-")[-1].split("/")[0]
@@ -178,7 +173,7 @@ def download_book(url, output, browser, cookies):
     download_cover(book_folder, book_info)
     # Формирование файла метаданных
     create_metadata_file(book_folder, book_info)
-    
+
     # Список файлов для загрузки
     url_string = url_string + "/files/grouped"
     res = requests.get(url_string, cookies=cookies, headers=headers)
