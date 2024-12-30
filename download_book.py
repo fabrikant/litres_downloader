@@ -20,6 +20,27 @@ logger = logging.getLogger(__name__)
 LITRES_DOMAIN_NAME = "litres.ru"
 CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
 api_url = f"https://api.{LITRES_DOMAIN_NAME}/foundation/api/arts/"
+TG_API_KEY = ""
+TG_CHAT_ID = ""
+
+
+def send_to_telegram(msg):
+    if len(TG_API_KEY) > 0 and len(TG_CHAT_ID) > 0:
+        url = f"https://api.telegram.org/bot{TG_API_KEY}/sendMessage"
+        data = {"chat_id": TG_CHAT_ID, "text": msg}
+        res = requests.post(
+            url, data=data
+        )
+        if res.ok:
+            logger.info('Отправлено сообщение в телеграм')
+        else:
+            err_msg = f"Ошибка: {res.status_code} ({res.json()['description']}) POST: {url}"
+            logger.warning(err_msg)
+
+
+def close_programm(msg):
+    send_to_telegram(msg)
+    exit(0)
 
 
 def get_headers(browser):
@@ -37,11 +58,12 @@ def get_headers(browser):
 
 
 def download_mp3(url, path, filename, cookies, headers):
+    err_msg = ""
     logger.info(f"Загрузка файла: {url}")
     full_filename = Path(path) / sanitize_filename(filename)
 
     res = requests.get(url, stream=True, cookies=cookies, headers=headers)
-    if res.status_code == 200:
+    if res.ok:
         total_size = int(res.headers.get("content-length", 0))
         block_size = 1024
         with tqdm(
@@ -53,9 +75,14 @@ def download_mp3(url, path, filename, cookies, headers):
                     file.write(data)
 
             if total_size != 0 and progress_bar.n != total_size:
-                logger.error(f"Не удалось загрузить файл: {url}")
+                err_msg = f"Не удалось загрузить файл: {url}"
+                logger.error(err_msg)
+                return err_msg
     else:
-        logger.error(f"code: {res.status_code} При загрузке с адреса: {url}")
+        err_msg = f"Ошибка: {res.status_code} ({res.json()['error_msg']}) файл: {url}"
+        logger.error(err_msg)
+        return err_msg
+    return err_msg
 
 
 # Переворачиваем фамилию имя
@@ -141,11 +168,17 @@ def get_book_folder(output, book_info):
 
 def download_cover(book_folder, book_info):
     filename = Path(book_folder) / "cover.jpg"
-    res = requests.get(f'https://{LITRES_DOMAIN_NAME}{book_info["cover"]}', stream=True)
-    if res.status_code == 200:
+    url_string = f'https://{LITRES_DOMAIN_NAME}{book_info["cover"]}'
+    res = requests.get(url_string, stream=True)
+    if res.ok:
         res.raw.decode_content = True
         with open(filename, "wb") as f:
             shutil.copyfileobj(res.raw, f)
+    else:
+        err_msg = (
+            f"Ошибка: {res.status_code} ({res.json()['error_msg']}) GET {url_string}"
+        )
+        logger.warning(err_msg)
 
 
 def create_metadata_file(book_folder, book_info):
@@ -160,12 +193,18 @@ def download_book(url, output, browser, cookies):
 
     url_string = api_url + book_id
     res = requests.get(url_string, cookies=cookies, headers=headers)
-    if res.status_code != 200:
-        logger.error(f"Ошибка запроса GET: {url_string}. Статус: {res.status_code}")
-        exit(1)
+    if not res.ok:
+        err_msg = (
+            f"Ошибка: {res.status_code} ({res.json()['error_msg']}) GET {url_string}"
+        )
+        logger.error(err_msg)
+        close_programm(err_msg)
 
     book_info = get_book_info(res.json()["payload"]["data"])
-    logger.debug(f"Получена информация о книге: {book_info['title']}")
+    msg = f"Начало загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
+    logger.debug(msg)
+    send_to_telegram(msg)
+    
     book_folder = get_book_folder(output, book_info)
     logger.info(f"Загрузка файлов в каталог: {book_folder}")
 
@@ -177,9 +216,12 @@ def download_book(url, output, browser, cookies):
     # Список файлов для загрузки
     url_string = url_string + "/files/grouped"
     res = requests.get(url_string, cookies=cookies, headers=headers)
-    if res.status_code != 200:
-        logger.error(f"Ошибка запроса GET: {url_string}. Статус: {res.status_code}")
-        exit(1)
+    if not res.ok:
+        err_msg = (
+            f"Ошибка: {res.status_code} ({res.json()['error_msg']}) GET {url_string}"
+        )
+        logger.error(err_msg)
+        close_programm(err_msg)
 
     groups_info = res.json()["payload"]["data"]
     for group_info in groups_info:
@@ -189,19 +231,35 @@ def download_book(url, output, browser, cookies):
                 file_id = file_info["id"]
                 filename = file_info["filename"]
                 file_url = f"https://www.{LITRES_DOMAIN_NAME}/download_book_subscr/{book_id}/{file_id}/{filename}"
-                download_mp3(file_url, book_folder, filename, cookies, headers)
-            break
+                err_msg = download_mp3(
+                    file_url, book_folder, filename, cookies, headers
+                )
+                if err_msg != "":
+                    close_programm(err_msg)
+    
+    msg = f"Окончание загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
+    logger.debug(msg)
+    send_to_telegram(msg)
 
+    
 
 def cookies_is_valid(cookies):
-    result = False
-    res = requests.get(f"https://{LITRES_DOMAIN_NAME}", cookies=cookies)
+    err_msg = ""
+    url_string = f"https://{LITRES_DOMAIN_NAME}"
+    res = requests.get(url_string, cookies=cookies)
     if res.ok:
-        content_list = res.text.split("/me/profile/")
-        if len(content_list) > 1:
-            result = True
-
-    return result
+        ref_string = "/me/profile/"
+        content_list = res.text.split(ref_string)
+        if len(content_list) == 1:
+            err_msg = f"Ошибка: {res.status_code} GET {url_string} \
+                В полученных данных не удалось найти ссылку {ref_string}, \
+                что означает ошибку авторизации по файлу cookies"
+            logger.error(err_msg)
+    else:
+        err_msg = f"Ошибка: {res.status_code} ({res.json()['error_msg']}) GET {url_string} \
+                Ошибка авторизации по файлу cookies"
+        logger.error(err_msg)
+    return err_msg
 
 
 if __name__ == "__main__":
@@ -225,22 +283,42 @@ if __name__ == "__main__":
             По умолчанию: cookies.json",
         default="cookies.json",
     )
+    parser.add_argument(
+        "--telegram-api",
+        help="Наобязательный ключ API телеграм бота, который будет сообщать о процессе загрузки",
+        default="",
+    )
+    parser.add_argument(
+        "--telegram-chatid",
+        help="Наобязательный ключ идентификатор чата в который будет писать телеграм бот",
+        default="",
+    )
     parser.add_argument("-o", "--output", help="Путь к папке загрузки", default=".")
     parser.add_argument("--url", help="Адрес (url) страницы с книгой", default="")
 
     args = parser.parse_args()
     logger.info(args)
 
-    if len(args.cookies_file) > 0:
-        if Path(args.cookies_file).is_file():
-            logger.info(f"Try to get cookies from file {args.cookies_file}")
-            cookies_dict = json.loads(Path(args.cookies_file).read_text())
-            cookies = cookiejar_from_dict(cookies_dict)
+    TG_API_KEY = args.telegram_api
+    TG_CHAT_ID = args.telegram_chatid
 
-            # Проверим, что куки из файла валидные, иначе сбросим их
-            if not cookies_is_valid(cookies):
-                logger.error(f"The cookies in the file {args.cookies_file} is invalid")
-                exit(0)
+    if Path(args.cookies_file).is_file():
+        logger.info(f"Try to get cookies from file {args.cookies_file}")
+        cookies_dict = json.loads(Path(args.cookies_file).read_text())
+        cookies = cookiejar_from_dict(cookies_dict)
+
+        # Проверим, что куки из файла валидные, иначе сбросим их
+        err_msg = cookies_is_valid(cookies)
+        if not err_msg == "":
+            close_programm(err_msg)
+    else:
+        err_msg =f'Не найден файл с cookies: {args.cookies_file}'
+        logger.error(err_msg)
+        close_programm(err_msg)
 
     if len(args.url) > 0:
         download_book(args.url, args.output, args.browser, cookies=cookies)
+    else:
+        err_msg =f'Не передан url'
+        logger.error(err_msg)
+        close_programm(err_msg)        

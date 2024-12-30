@@ -63,11 +63,11 @@ def book_info_to_xml(book_info):
         elif "id" == key:
             xml_key = "identifier"
             postfix = ' opf:scheme="ASIN"'
-        elif "series_num" == key:
+        elif "series" == key:
             xml_key = "meta"
             prefix = "ns0:"
             postfix = f' name="calibre:series" content="{book_info[key]}"'
-        elif "series" == key:
+        elif "series_num" == key:
             xml_key = "meta"
             prefix = "ns0:"
             postfix = f' name="calibre:series_index" content="{book_info[key]}"'
