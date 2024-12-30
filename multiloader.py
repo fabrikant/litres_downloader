@@ -67,7 +67,8 @@ if __name__ == "__main__":
             cookies = cookiejar_from_dict(cookies_dict)
 
             # Проверим, что куки из файла валидные, иначе сбросим их
-            if not cookies_is_valid(cookies):
+            err_msg = cookies_is_valid(cookies)
+            if err_msg != "":
                 logger.error(f"The cookies in the file {args.cookies_file} is invalid")
                 exit(0)
 
