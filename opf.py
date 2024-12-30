@@ -68,6 +68,9 @@ def book_info_to_xml(book_info):
             prefix = "ns0:"
             postfix = f' name="calibre:series" content="{book_info[key]}"'
         elif "series_num" == key:
+            # Если значение номера не установлено, не пишем в файл
+            if book_info[key] == 0:
+                continue
             xml_key = "meta"
             prefix = "ns0:"
             postfix = f' name="calibre:series_index" content="{book_info[key]}"'
