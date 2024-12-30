@@ -79,7 +79,7 @@ def download_mp3(url, path, filename, cookies, headers):
                 logger.error(err_msg)
                 return err_msg
     else:
-        err_msg = f"Ошибка: {res.status_code} ({res.json()['error_msg']}) файл: {url}"
+        err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) файл: {url}"
         logger.error(err_msg)
         return err_msg
     return err_msg
@@ -176,7 +176,7 @@ def download_cover(book_folder, book_info):
             shutil.copyfileobj(res.raw, f)
     else:
         err_msg = (
-            f"Ошибка: {res.status_code} ({res.json()['error_msg']}) GET {url_string}"
+            f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
         )
         logger.warning(err_msg)
 
@@ -195,7 +195,7 @@ def download_book(url, output, browser, cookies):
     res = requests.get(url_string, cookies=cookies, headers=headers)
     if not res.ok:
         err_msg = (
-            f"Ошибка: {res.status_code} ({res.json()['error_msg']}) GET {url_string}"
+            f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
         )
         logger.error(err_msg)
         close_programm(err_msg)
@@ -218,7 +218,7 @@ def download_book(url, output, browser, cookies):
     res = requests.get(url_string, cookies=cookies, headers=headers)
     if not res.ok:
         err_msg = (
-            f"Ошибка: {res.status_code} ({res.json()['error_msg']}) GET {url_string}"
+            f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
         )
         logger.error(err_msg)
         close_programm(err_msg)
@@ -256,7 +256,7 @@ def cookies_is_valid(cookies):
                 что означает ошибку авторизации по файлу cookies"
             logger.error(err_msg)
     else:
-        err_msg = f"Ошибка: {res.status_code} ({res.json()['error_msg']}) GET {url_string} \
+        err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string} \
                 Ошибка авторизации по файлу cookies"
         logger.error(err_msg)
     return err_msg
