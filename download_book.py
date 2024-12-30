@@ -131,7 +131,7 @@ def get_book_folder(output, book_info):
 
     if book_info["series_num"] > 0:
         book_folder = Path(book_folder) / sanitize_filename(
-            f'{book_info["series_num"]:02d} {book_info["title"]}'
+            f'{book_info["series_num"]:02d} - {book_info["title"]} - читает {book_info["narrator"]}'
         )
     else:
         book_folder = Path(book_folder) / sanitize_filename(book_info["title"])
