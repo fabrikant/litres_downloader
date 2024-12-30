@@ -1,7 +1,7 @@
 import argparse
 import logging
 from pathlib import Path
-from download_book import download_book, cookies_is_valid
+from download_book import download_book, cookies_is_valid, TG_API_KEY, TG_CHAT_ID
 import json
 from requests.utils import cookiejar_from_dict
 
@@ -40,6 +40,16 @@ if __name__ == "__main__":
         default="cookies.json",
     )
     parser.add_argument(
+        "--telegram-api",
+        help="Наобязательный ключ API телеграм бота, который будет сообщать о процессе загрузки",
+        default="",
+    )
+    parser.add_argument(
+        "--telegram-chatid",
+        help="Наобязательный ключ идентификатор чата в который будет писать телеграм бот",
+        default="",
+    )
+    parser.add_argument(
         "-i",
         "--input",
         help="Путь к файлу со списком url книг к загрузке. Каждый адрес с новой строки",
@@ -61,4 +71,6 @@ if __name__ == "__main__":
                 logger.error(f"The cookies in the file {args.cookies_file} is invalid")
                 exit(0)
 
+    TG_API_KEY = args.telegram_api
+    TG_CHAT_ID = args.telegram_chatid
     download_books(args.input, args.output, args.browser, cookies)
