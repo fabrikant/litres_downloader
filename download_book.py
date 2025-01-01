@@ -98,6 +98,7 @@ def if_to_fi(person_if):
 
 def get_book_info(json_data):
     book_info = {
+        "url":f'https://{LITRES_DOMAIN_NAME}{json_data["url"]}',
         "id": json_data["id"],
         "title": json_data["title"],
         "author": "",
