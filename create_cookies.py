@@ -22,8 +22,10 @@ from webdriver_manager.firefox import GeckoDriverManager
 from selenium.webdriver.chrome.service import Service as chrome_service
 from webdriver_manager.chrome import ChromeDriverManager
 
-LITRES_DOMAIN_NAME = "litres.ru"
+from common import LITRES_DOMAIN_NAME, cookies_is_valid, send_to_telegram
 
+TG_API_KEY = ""
+TG_CHAT_ID = ""
 
 logger = logging.getLogger(__name__)
 
@@ -80,17 +82,16 @@ def put_cookies_in_jar(selenium_cookies):
 
 def create_cookies(user, password, browser, cookies_file):
 
+    msg = f"Начало формирования файла {cookies_file}. Пользователь: {user}, браузер: {browser}"
+    logger.info(msg)
+    send_to_telegram(msg, TG_API_KEY, TG_CHAT_ID)
+
     if "chrome" in browser:
         driver = get_chrome_driver()
     else:
         driver = get_firefox_driver()
 
     driver.implicitly_wait(10)
-
-    # driver.get("https://www.litres.ru/")
-    # enter_button = driver.find_element(By.LINK_TEXT, '/auth/login')
-    # enter_button.click()
-
     driver.get(f"https://www.{LITRES_DOMAIN_NAME}/auth/login")
 
     id = "auth__input--enterEmailOrLogin"
@@ -105,14 +106,16 @@ def create_cookies(user, password, browser, cookies_file):
     ActionChains(driver).key_down(Keys.SHIFT).send_keys(Keys.ENTER).perform()
     time.sleep(random.randint(5, 9))
 
-    cookies = driver.get_cookies()
-    logger.info(cookies)
+    browser_cookies = driver.get_cookies()
+    logger.info(browser_cookies)
     driver.quit()
-    
-    Path(args.cookies_file).write_text(
-            json.dumps(dict_from_cookiejar(put_cookies_in_jar(cookies))))
-    
-    
+
+    cookies = put_cookies_in_jar(browser_cookies)
+    err_msg = cookies_is_valid(cookies, TG_API_KEY, TG_CHAT_ID)
+    if err_msg == "":
+        Path(args.cookies_file).write_text(json.dumps(dict_from_cookiejar(cookies)))
+        send_to_telegram(f"Записан файл {args.cookies_file}", TG_API_KEY, TG_CHAT_ID)
+
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -131,6 +134,16 @@ if __name__ == "__main__":
         default="chrome",
         choices=["chrome", "firefox"],
     )
+    parser.add_argument(
+        "--telegram-api",
+        help="Наобязательный ключ API телеграм бота, который будет сообщать о процессе загрузки",
+        default="",
+    )
+    parser.add_argument(
+        "--telegram-chatid",
+        help="Наобязательный ключ идентификатор чата в который будет писать телеграм бот",
+        default="",
+    )
     parser.add_argument("-u", "--user", help="Имя пользователя", default="")
     parser.add_argument("-p", "--password", help="Пароль", default="")
     parser.add_argument(
@@ -139,5 +152,9 @@ if __name__ == "__main__":
         default="cookies.json",
     )
     args = parser.parse_args()
+
+    TG_API_KEY = args.telegram_api
+    TG_CHAT_ID = args.telegram_chatid
+
     logger.info(args)
     create_cookies(args.user, args.password, args.browser, args.cookies_file)

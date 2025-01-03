@@ -16,30 +16,17 @@ except ImportError:
 import json
 from requests.utils import cookiejar_from_dict
 
+from common import LITRES_DOMAIN_NAME, cookies_is_valid, send_to_telegram
+
 logger = logging.getLogger(__name__)
-LITRES_DOMAIN_NAME = "litres.ru"
 CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
 api_url = f"https://api.{LITRES_DOMAIN_NAME}/foundation/api/arts/"
 TG_API_KEY = ""
 TG_CHAT_ID = ""
 
 
-def send_to_telegram(msg):
-    if len(TG_API_KEY) > 0 and len(TG_CHAT_ID) > 0:
-        url = f"https://api.telegram.org/bot{TG_API_KEY}/sendMessage"
-        data = {"chat_id": TG_CHAT_ID, "text": msg}
-        res = requests.post(
-            url, data=data
-        )
-        if res.ok:
-            logger.info('Отправлено сообщение в телеграм')
-        else:
-            err_msg = f"Ошибка: {res.status_code} ({res.json()['description']}) POST: {url}"
-            logger.warning(err_msg)
-
-
 def close_programm(msg):
-    send_to_telegram(msg)
+    send_to_telegram(msg, TG_API_KEY, TG_CHAT_ID)
     exit(0)
 
 
@@ -98,7 +85,7 @@ def if_to_fi(person_if):
 
 def get_book_info(json_data):
     book_info = {
-        "url":f'https://{LITRES_DOMAIN_NAME}{json_data["url"]}',
+        "url": f'https://{LITRES_DOMAIN_NAME}{json_data["url"]}',
         "id": json_data["id"],
         "title": json_data["title"],
         "author": "",
@@ -176,9 +163,7 @@ def download_cover(book_folder, book_info):
         with open(filename, "wb") as f:
             shutil.copyfileobj(res.raw, f)
     else:
-        err_msg = (
-            f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
-        )
+        err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
         logger.warning(err_msg)
 
 
@@ -195,17 +180,15 @@ def download_book(url, output, browser, cookies):
     url_string = api_url + book_id
     res = requests.get(url_string, cookies=cookies, headers=headers)
     if not res.ok:
-        err_msg = (
-            f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
-        )
+        err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
         logger.error(err_msg)
         close_programm(err_msg)
 
     book_info = get_book_info(res.json()["payload"]["data"])
     msg = f"Начало загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
     logger.debug(msg)
-    send_to_telegram(msg)
-    
+    send_to_telegram(msg, TG_API_KEY, TG_CHAT_ID)
+
     book_folder = get_book_folder(output, book_info)
     logger.info(f"Загрузка файлов в каталог: {book_folder}")
 
@@ -218,9 +201,7 @@ def download_book(url, output, browser, cookies):
     url_string = url_string + "/files/grouped"
     res = requests.get(url_string, cookies=cookies, headers=headers)
     if not res.ok:
-        err_msg = (
-            f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
-        )
+        err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
         logger.error(err_msg)
         close_programm(err_msg)
 
@@ -237,30 +218,12 @@ def download_book(url, output, browser, cookies):
                 )
                 if err_msg != "":
                     close_programm(err_msg)
-    
-    msg = f"Окончание загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
+
+    msg = (
+        f"Окончание загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
+    )
     logger.debug(msg)
-    send_to_telegram(msg)
-
-    
-
-def cookies_is_valid(cookies):
-    err_msg = ""
-    url_string = f"https://{LITRES_DOMAIN_NAME}"
-    res = requests.get(url_string, cookies=cookies)
-    if res.ok:
-        ref_string = "/me/profile/"
-        content_list = res.text.split(ref_string)
-        if len(content_list) == 1:
-            err_msg = f"Ошибка: {res.status_code} GET {url_string} \
-                В полученных данных не удалось найти ссылку {ref_string}, \
-                что означает ошибку авторизации по файлу cookies"
-            logger.error(err_msg)
-    else:
-        err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string} \
-                Ошибка авторизации по файлу cookies"
-        logger.error(err_msg)
-    return err_msg
+    send_to_telegram(msg, TG_API_KEY, TG_CHAT_ID)
 
 
 if __name__ == "__main__":
@@ -308,18 +271,18 @@ if __name__ == "__main__":
         cookies_dict = json.loads(Path(args.cookies_file).read_text())
         cookies = cookiejar_from_dict(cookies_dict)
 
-        # Проверим, что куки из файла валидные, иначе сбросим их
-        err_msg = cookies_is_valid(cookies)
+        # Проверим, что куки из файла валидные, иначе прервем выполнение
+        err_msg = cookies_is_valid(cookies, TG_API_KEY, TG_CHAT_ID)
         if not err_msg == "":
             close_programm(err_msg)
     else:
-        err_msg =f'Не найден файл с cookies: {args.cookies_file}'
+        err_msg = f"Не найден файл с cookies: {args.cookies_file}"
         logger.error(err_msg)
         close_programm(err_msg)
 
     if len(args.url) > 0:
         download_book(args.url, args.output, args.browser, cookies=cookies)
     else:
-        err_msg =f'Не передан url'
+        err_msg = f"Не передан url"
         logger.error(err_msg)
-        close_programm(err_msg)        
+        close_programm(err_msg)
