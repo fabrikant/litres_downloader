@@ -22,7 +22,8 @@ from webdriver_manager.firefox import GeckoDriverManager
 from selenium.webdriver.chrome.service import Service as chrome_service
 from webdriver_manager.chrome import ChromeDriverManager
 
-from common import LITRES_DOMAIN_NAME, cookies_is_valid, send_to_telegram
+from common import LITRES_DOMAIN_NAME, cookies_is_valid
+from tg_sender import send_to_telegram
 
 TG_API_KEY = ""
 TG_CHAT_ID = ""
@@ -130,8 +131,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-b",
         "--browser",
-        help=f"Браузер в котором будут формироваться cookies. По умолчанию: chrome",
-        default="chrome",
+        help=f"Браузер в котором будут формироваться cookies. По умолчанию: firefox",
+        default="firefox",
         choices=["chrome", "firefox"],
     )
     parser.add_argument(

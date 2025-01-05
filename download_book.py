@@ -16,13 +16,13 @@ except ImportError:
 import json
 from requests.utils import cookiejar_from_dict
 
-from common import LITRES_DOMAIN_NAME, cookies_is_valid, send_to_telegram
+from common import LITRES_DOMAIN_NAME, cookies_is_valid
+from tg_sender import send_to_telegram
+
 
 logger = logging.getLogger(__name__)
 CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
 api_url = f"https://api.{LITRES_DOMAIN_NAME}/foundation/api/arts/"
-TG_API_KEY = ""
-TG_CHAT_ID = ""
 
 
 def close_programm(msg):
@@ -30,41 +30,39 @@ def close_programm(msg):
     exit(0)
 
 
-def get_headers(browser):
+def get_headers():
     ua = UserAgent()
-    agent = ua.chrome
-    if browser == "firefox":
-        agent = ua.firefox
-    elif browser == "edge":
-        agent = ua.edge
-    elif browser == "safari":
-        agent = ua.safari
+    agent = ua.firefox
     return {
         "User-Agent": agent,
     }
 
 
-def download_mp3(url, path, filename, cookies, headers):
+def download_mp3(url, path, filename, cookies, headers, progress_bar):
     err_msg = ""
     logger.info(f"Загрузка файла: {url}")
     full_filename = Path(path) / sanitize_filename(filename)
 
     res = requests.get(url, stream=True, cookies=cookies, headers=headers)
     if res.ok:
-        total_size = int(res.headers.get("content-length", 0))
-        block_size = 1024
-        with tqdm(
-            total=total_size, unit="B", unit_scale=True, desc=filename
-        ) as progress_bar:
-            with open(full_filename, "wb") as file:
-                for data in res.iter_content(block_size):
-                    progress_bar.update(len(data))
-                    file.write(data)
+        if progress_bar:
+            total_size = int(res.headers.get("content-length", 0))
+            block_size = 1024
+            with tqdm(
+                total=total_size, unit="B", unit_scale=True, desc=filename
+            ) as progress_bar:
+                with open(full_filename, "wb") as file:
+                    for data in res.iter_content(block_size):
+                        progress_bar.update(len(data))
+                        file.write(data)
 
-            if total_size != 0 and progress_bar.n != total_size:
-                err_msg = f"Не удалось загрузить файл: {url}"
-                logger.error(err_msg)
-                return err_msg
+                if total_size != 0 and progress_bar.n != total_size:
+                    err_msg = f"Не удалось загрузить файл: {url}"
+                    logger.error(err_msg)
+                    return err_msg
+        else:
+            with open(full_filename, "wb") as f:
+                shutil.copyfileobj(res.raw, f)            
     else:
         err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) файл: {url}"
         logger.error(err_msg)
@@ -173,8 +171,8 @@ def create_metadata_file(book_folder, book_info):
     Path(filename).write_text(xml)
 
 
-def download_book(url, output, browser, cookies):
-    headers = get_headers(browser)
+def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=False):
+    headers = get_headers()
     book_id = url.split("-")[-1].split("/")[0]
 
     url_string = api_url + book_id
@@ -187,7 +185,7 @@ def download_book(url, output, browser, cookies):
     book_info = get_book_info(res.json()["payload"]["data"])
     msg = f"Начало загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
     logger.debug(msg)
-    send_to_telegram(msg, TG_API_KEY, TG_CHAT_ID)
+    send_to_telegram(msg, tg_api_key, tg_chat_id)
 
     book_folder = get_book_folder(output, book_info)
     logger.info(f"Загрузка файлов в каталог: {book_folder}")
@@ -214,7 +212,7 @@ def download_book(url, output, browser, cookies):
                 filename = file_info["filename"]
                 file_url = f"https://www.{LITRES_DOMAIN_NAME}/download_book_subscr/{book_id}/{file_id}/{filename}"
                 err_msg = download_mp3(
-                    file_url, book_folder, filename, cookies, headers
+                    file_url, book_folder, filename, cookies, headers, progress_bar
                 )
                 if err_msg != "":
                     close_programm(err_msg)
@@ -223,7 +221,7 @@ def download_book(url, output, browser, cookies):
         f"Окончание загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
     )
     logger.debug(msg)
-    send_to_telegram(msg, TG_API_KEY, TG_CHAT_ID)
+    send_to_telegram(msg, tg_api_key, tg_chat_id)
 
 
 if __name__ == "__main__":
@@ -234,18 +232,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=f"Загрузчик аудиокниг с сайта {LITRES_DOMAIN_NAME} ДОСТУПНЫХ ПОЛЬЗОВАТЕЛЮ ПО ПОДПИСКЕ "
     )
+
     parser.add_argument(
-        "-b",
-        "--browser",
-        help=f"Будет эмулироваться User agent этого браузера. По умолчанию: chrome",
-        default="chrome",
-        choices=["chrome", "edge", "firefox", "safari"],
-    )
-    parser.add_argument(
-        "--cookies-file",
-        help="Файл содержащий cookies. Нужно предварительно сформировать скриптом create-cookies.py \
-            По умолчанию: cookies.json",
-        default="cookies.json",
+        "--progressbar",
+        help="Показывать прогресс для каждого файла",
+        action=argparse.BooleanOptionalAction,
+        default=False,
     )
     parser.add_argument(
         "--telegram-api",
@@ -257,14 +249,17 @@ if __name__ == "__main__":
         help="Наобязательный ключ идентификатор чата в который будет писать телеграм бот",
         default="",
     )
+    parser.add_argument(
+        "--cookies-file",
+        help="Файл содержащий cookies. Нужно предварительно сформировать скриптом create-cookies.py \
+            По умолчанию: cookies.json",
+        default="cookies.json",
+    )
     parser.add_argument("-o", "--output", help="Путь к папке загрузки", default=".")
     parser.add_argument("--url", help="Адрес (url) страницы с книгой", default="")
 
     args = parser.parse_args()
     logger.info(args)
-
-    TG_API_KEY = args.telegram_api
-    TG_CHAT_ID = args.telegram_chatid
 
     if Path(args.cookies_file).is_file():
         logger.info(f"Try to get cookies from file {args.cookies_file}")
@@ -272,7 +267,7 @@ if __name__ == "__main__":
         cookies = cookiejar_from_dict(cookies_dict)
 
         # Проверим, что куки из файла валидные, иначе прервем выполнение
-        err_msg = cookies_is_valid(cookies, TG_API_KEY, TG_CHAT_ID)
+        err_msg = cookies_is_valid(cookies, args.telegram_api, args.telegram_chatid)
         if not err_msg == "":
             close_programm(err_msg)
     else:
@@ -281,7 +276,14 @@ if __name__ == "__main__":
         close_programm(err_msg)
 
     if len(args.url) > 0:
-        download_book(args.url, args.output, args.browser, cookies=cookies)
+        download_book(
+            args.url,
+            args.output,
+            cookies,
+            args.telegram_api,
+            args.telegram_chatid,
+            args.progressbar,
+        )
     else:
         err_msg = f"Не передан url"
         logger.error(err_msg)

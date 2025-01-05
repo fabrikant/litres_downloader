@@ -8,13 +8,15 @@ from requests.utils import cookiejar_from_dict
 logger = logging.getLogger(__name__)
 
 
-def download_books(input, output, browser, cookies):
+def download_books(input, output, cookies, tg_api_key, tg_chat_id, progressbar):
     with open(input, "r") as f:
         for url in f:
             url_trim = url.strip()
             if "litres.ru" in url_trim:
                 logger.info(f"Адрес к загрузке: {url_trim}")
-                download_book(url_trim, output, browser, cookies)
+                download_book(
+                    url_trim, output, cookies, tg_api_key, tg_chat_id, progressbar
+                )
 
 
 if __name__ == "__main__":
@@ -26,11 +28,20 @@ if __name__ == "__main__":
         description="Загрузчик аудиокниг доступных по подписке с сайта litres.ru. \n Прежде чем использовать скрипт, небходимо в браузере залогиниться на сайте. \n Загрузчик использует cookies из браузера."
     )
     parser.add_argument(
-        "-b",
-        "--browser",
-        help=f"Будет эмулироваться User agent этого браузера. По умолчанию: chrome",
-        default="chrome",
-        choices=["chrome", "edge", "firefox", "safari"],
+        "--progressbar",
+        help="Показывать прогресс для каждого файла",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    parser.add_argument(
+        "--telegram-api",
+        help="Наобязательный ключ API телеграм бота, который будет сообщать о процессе загрузки",
+        default="",
+    )
+    parser.add_argument(
+        "--telegram-chatid",
+        help="Наобязательный ключ идентификатор чата в который будет писать телеграм бот",
+        default="",
     )
     parser.add_argument(
         "--cookies-file",
@@ -61,4 +72,11 @@ if __name__ == "__main__":
                 logger.error(f"The cookies in the file {args.cookies_file} is invalid")
                 exit(0)
 
-    download_books(args.input, args.output, args.browser, cookies)
+    download_books(
+        args.input,
+        args.output,
+        cookies,
+        args.telegram_api,
+        args.telegram_chatid,
+        args.progressbar,
+    )
