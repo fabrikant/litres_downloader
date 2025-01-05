@@ -7,6 +7,7 @@ from requests.utils import cookiejar_from_dict
 
 logger = logging.getLogger(__name__)
 
+
 def download_books(input, output, browser, cookies):
     with open(input, "r") as f:
         for url in f:
@@ -55,7 +56,7 @@ if __name__ == "__main__":
             cookies = cookiejar_from_dict(cookies_dict)
 
             # Проверим, что куки из файла валидные, иначе сбросим их
-            err_msg = cookies_is_valid(cookies)
+            err_msg = cookies_is_valid(cookies, tg_api_key="", tg_chat_id="")
             if err_msg != "":
                 logger.error(f"The cookies in the file {args.cookies_file} is invalid")
                 exit(0)
