@@ -8,6 +8,8 @@ from tqdm import tqdm
 import shutil
 from opf import book_info_to_xml
 import re
+import sys
+import subprocess
 
 try:
     import cookielib
@@ -222,6 +224,8 @@ def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=Fal
     )
     logger.debug(msg)
     send_to_telegram(msg, tg_api_key, tg_chat_id)
+    if sys.platform != "win32":
+        subprocess.Popen(f"chmod -R ugo+wrX '{str(book_folder)}'", shell=True)
 
 
 if __name__ == "__main__":
