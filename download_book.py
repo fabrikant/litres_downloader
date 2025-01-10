@@ -64,7 +64,7 @@ def download_mp3(url, path, filename, cookies, headers, progress_bar):
                     return err_msg
         else:
             with open(full_filename, "wb") as f:
-                shutil.copyfileobj(res.raw, f)            
+                shutil.copyfileobj(res.raw, f)
     else:
         err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) файл: {url}"
         logger.error(err_msg)
@@ -250,7 +250,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--telegram-chatid",
-        help="Наобязательный ключ идентификатор чата в который будет писать телеграм бот",
+        help="Необязательный ключ идентификатор чата в который будет писать телеграм бот",
         default="",
     )
     parser.add_argument(
