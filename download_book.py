@@ -20,6 +20,7 @@ from requests.utils import cookiejar_from_dict
 
 from common import LITRES_DOMAIN_NAME, cookies_is_valid
 from tg_sender import send_to_telegram
+from common_arguments import create_common_args, check_common_args
 
 
 logger = logging.getLogger(__name__)
@@ -119,7 +120,7 @@ def get_book_info(json_data):
                 book_info["narrator"] = person_name
 
     for genre in json_data["genres"]:
-        book_info["genres"].append(genre["name"])
+        book_info["genres"].append(genre["name"].lower())
 
     for series_info in json_data["series"]:
         if "name" in series_info and series_info["name"] != None:
@@ -131,7 +132,7 @@ def get_book_info(json_data):
         break
 
     for tag in json_data["tags"]:
-        book_info["tags"].append(tag["name"])
+        book_info["tags"].append(tag["name"].lower())
 
     return book_info
 
@@ -229,14 +230,11 @@ def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=Fal
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        level=logging.INFO,
-    )
-    parser = argparse.ArgumentParser(
-        description=f"Загрузчик аудиокниг с сайта {LITRES_DOMAIN_NAME} ДОСТУПНЫХ ПОЛЬЗОВАТЕЛЮ ПО ПОДПИСКЕ "
-    )
 
+    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.ERROR)
+    # Создаем общие аргументы для всех качалок
+    parser = create_common_args(f"Загрузчик аудиокниг с сайта {LITRES_DOMAIN_NAME} ДОСТУПНЫХ ПОЛЬЗОВАТЕЛЮ ПО ПОДПИСКЕ")
+    # Добавляем специфические аргументы для данной качалки
     parser.add_argument(
         "--progressbar",
         help="Показывать прогресс для каждого файла",
@@ -244,29 +242,18 @@ if __name__ == "__main__":
         default=False,
     )
     parser.add_argument(
-        "--telegram-api",
-        help="Наобязательный ключ API телеграм бота, который будет сообщать о процессе загрузки",
-        default="",
-    )
-    parser.add_argument(
-        "--telegram-chatid",
-        help="Необязательный ключ идентификатор чата в который будет писать телеграм бот",
-        default="",
-    )
-    parser.add_argument(
         "--cookies-file",
         help="Файл содержащий cookies. Нужно предварительно сформировать скриптом create-cookies.py \
             По умолчанию: cookies.json",
         default="cookies.json",
     )
-    parser.add_argument("-o", "--output", help="Путь к папке загрузки", default=".")
-    parser.add_argument("--url", help="Адрес (url) страницы с книгой", default="")
 
-    args = parser.parse_args()
+    args = check_common_args(parser, logger)
     logger.info(args)
 
+
     if Path(args.cookies_file).is_file():
-        logger.info(f"Try to get cookies from file {args.cookies_file}")
+        logger.info(f"Попытка извлечь cookies из файла {args.cookies_file}")
         cookies_dict = json.loads(Path(args.cookies_file).read_text())
         cookies = cookiejar_from_dict(cookies_dict)
 
@@ -279,16 +266,11 @@ if __name__ == "__main__":
         logger.error(err_msg)
         close_programm(err_msg, args.telegram_api, args.telegram_chatid)
 
-    if len(args.url) > 0:
-        download_book(
-            args.url,
-            args.output,
-            cookies,
-            args.telegram_api,
-            args.telegram_chatid,
-            args.progressbar,
-        )
-    else:
-        err_msg = f"Не передан url"
-        logger.error(err_msg)
-        close_programm(err_msg, args.telegram_api, args.telegram_chatid)
+    download_book(
+        args.url,
+        args.output,
+        cookies,
+        args.telegram_api,
+        args.telegram_chatid,
+        args.progressbar,
+    )
