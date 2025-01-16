@@ -27,8 +27,8 @@ CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
 api_url = f"https://api.{LITRES_DOMAIN_NAME}/foundation/api/arts/"
 
 
-def close_programm(msg):
-    send_to_telegram(msg, TG_API_KEY, TG_CHAT_ID)
+def close_programm(msg, tg_api_key, tg_chat_id):
+    send_to_telegram(msg, tg_api_key, tg_chat_id)
     exit(0)
 
 
@@ -182,7 +182,7 @@ def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=Fal
     if not res.ok:
         err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
         logger.error(err_msg)
-        close_programm(err_msg)
+        close_programm(err_msg, tg_api_key, tg_chat_id)
 
     book_info = get_book_info(res.json()["payload"]["data"])
     msg = f"Начало загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
@@ -203,7 +203,7 @@ def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=Fal
     if not res.ok:
         err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) GET {url_string}"
         logger.error(err_msg)
-        close_programm(err_msg)
+        close_programm(err_msg, tg_api_key, tg_chat_id)
 
     groups_info = res.json()["payload"]["data"]
     for group_info in groups_info:
@@ -217,7 +217,7 @@ def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=Fal
                     file_url, book_folder, filename, cookies, headers, progress_bar
                 )
                 if err_msg != "":
-                    close_programm(err_msg)
+                    close_programm(err_msg, tg_api_key, tg_chat_id)
 
     msg = (
         f"Окончание загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
@@ -273,11 +273,11 @@ if __name__ == "__main__":
         # Проверим, что куки из файла валидные, иначе прервем выполнение
         err_msg = cookies_is_valid(cookies, args.telegram_api, args.telegram_chatid)
         if not err_msg == "":
-            close_programm(err_msg)
+            close_programm(err_msg, args.telegram_api, args.telegram_chatid)
     else:
         err_msg = f"Не найден файл с cookies: {args.cookies_file}"
         logger.error(err_msg)
-        close_programm(err_msg)
+        close_programm(err_msg, args.telegram_api, args.telegram_chatid)
 
     if len(args.url) > 0:
         download_book(
@@ -291,4 +291,4 @@ if __name__ == "__main__":
     else:
         err_msg = f"Не передан url"
         logger.error(err_msg)
-        close_programm(err_msg)
+        close_programm(err_msg, args.telegram_api, args.telegram_chatid)
