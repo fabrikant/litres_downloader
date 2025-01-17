@@ -20,7 +20,7 @@ from requests.utils import cookiejar_from_dict
 
 from common import LITRES_DOMAIN_NAME, cookies_is_valid
 from tg_sender import send_to_telegram
-from common_arguments import create_common_args, check_common_args
+from common_arguments import create_common_args, parse_args
 
 
 logger = logging.getLogger(__name__)
@@ -174,7 +174,16 @@ def create_metadata_file(book_folder, book_info):
     Path(filename).write_text(xml)
 
 
-def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=False):
+def download_book(
+    url,
+    output,
+    cookies,
+    tg_api_key,
+    tg_chat_id,
+    progress_bar,
+    load_cover,
+    create_metadata,
+):
     headers = get_headers()
     book_id = url.split("-")[-1].split("/")[0]
 
@@ -194,9 +203,11 @@ def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=Fal
     logger.info(f"Загрузка файлов в каталог: {book_folder}")
 
     # Загрузка обложки
-    download_cover(book_folder, book_info)
+    if load_cover:
+        download_cover(book_folder, book_info)
     # Формирование файла метаданных
-    create_metadata_file(book_folder, book_info)
+    if create_metadata:
+        create_metadata_file(book_folder, book_info)
 
     # Список файлов для загрузки
     url_string = url_string + "/files/grouped"
@@ -231,9 +242,14 @@ def download_book(url, output, cookies, tg_api_key, tg_chat_id, progress_bar=Fal
 
 if __name__ == "__main__":
 
-    logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.ERROR)
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=logging.ERROR,
+    )
     # Создаем общие аргументы для всех качалок
-    parser = create_common_args(f"Загрузчик аудиокниг с сайта {LITRES_DOMAIN_NAME} ДОСТУПНЫХ ПОЛЬЗОВАТЕЛЮ ПО ПОДПИСКЕ")
+    parser = create_common_args(
+        f"Загрузчик аудиокниг с сайта {LITRES_DOMAIN_NAME} ДОСТУПНЫХ ПОЛЬЗОВАТЕЛЮ ПО ПОДПИСКЕ"
+    )
     # Добавляем специфические аргументы для данной качалки
     parser.add_argument(
         "--progressbar",
@@ -244,13 +260,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cookies-file",
         help="Файл содержащий cookies. Нужно предварительно сформировать скриптом create-cookies.py \
-            По умолчанию: cookies.json",
+            По умолчанию: cookies.json в каталоге скрипта",
         default="cookies.json",
     )
 
-    args = check_common_args(parser, logger)
+    args = parse_args(parser, logger)
     logger.info(args)
-
 
     if Path(args.cookies_file).is_file():
         logger.info(f"Попытка извлечь cookies из файла {args.cookies_file}")
@@ -273,4 +288,6 @@ if __name__ == "__main__":
         args.telegram_api,
         args.telegram_chatid,
         args.progressbar,
+        args.cover,
+        args.metadata,
     )
