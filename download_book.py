@@ -10,11 +10,6 @@ from opf import book_info_to_xml
 import re
 import sys
 import subprocess
-
-try:
-    import cookielib
-except ImportError:
-    import http.cookiejar as cookielib
 import json
 from requests.utils import cookiejar_from_dict
 
