@@ -45,7 +45,9 @@ deactivate
 Если установка произведена с помощью скрипта ./install.sh, то для запуска можно воспользоваться скриптами: ***create-cookies.sh, get-browser-cookies.sh, download-book.sh, multiloader.sh***
 При их использовании будет автоматически активировано виртуально окружение, вызван скрипт python, а по окончанию работы деактивировано виртуальное окружение.
 
-Каждый скрипт можно вызвать с параметром -h или --help для получения справки по доступным параметрам.
+>**ВАЖНО!!!**
+>
+>**Для получения справки по доуступным ключам, любой скрипт можно вызвать с параметром -h или --help.**
 
 **Windows**
 
@@ -66,9 +68,10 @@ python3 download_book.py --help
     ```bash
     ./get-browser-cookies.sh -b {firefox} --cookies-file {/tmp/cookies-file.json}
     ```
+    >*Значения в фигурных скобках нужно заменить на свои.*
 - Сформировать файл cookies с помщью имени/пароля и браузера **firefox** или **chrome**
     ```bash
-    ./create-cookies.sh -u {your_user_name} -p {password} --cookies-file {/tmp/cookies-file.json}
+    ./create-cookies.sh -b {firefox} -u {your_user_name} -p {password} --cookies-file {/tmp/cookies-file.json}
     ```
     >*Значения в фигурных скобках нужно заменить на свои.*
 
