@@ -2,7 +2,7 @@ requests
 pathvalidate
 fake-useragent
 tqdm
-
+browsercookie
 
 blinker==1.7.0
 selenium
