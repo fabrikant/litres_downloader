@@ -36,7 +36,7 @@ def get_headers():
     }
 
 
-def download_mp3(url, path, filename, cookies, headers, progress_bar):
+def download_content_file(url, path, filename, cookies, headers, progress_bar):
     err_msg = ""
     logger.info(f"Загрузка файла: {url}")
     full_filename = Path(path) / sanitize_filename(filename)
@@ -62,7 +62,12 @@ def download_mp3(url, path, filename, cookies, headers, progress_bar):
             with open(full_filename, "wb") as f:
                 shutil.copyfileobj(res.raw, f)
     else:
-        err_msg = f"Ошибка: {res.status_code} ({str(res.json())}) файл: {url}"
+        err_descr = ""
+        try:
+           err_descr = f"({str(res.json())})"
+        except:
+            pass   
+        err_msg = f"Ошибка: {res.status_code} {err_descr} файл: {url}"
         logger.error(err_msg)
         return err_msg
     return err_msg
@@ -190,6 +195,7 @@ def download_book(
         close_programm(err_msg, tg_api_key, tg_chat_id)
 
     book_info = get_book_info(res.json()["payload"]["data"])
+    release_file_id = res.json()["payload"]["data"]["linked_arts"][0]["release_file_id"]
     msg = f"Начало загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
     logger.debug(msg)
     send_to_telegram(msg, tg_api_key, tg_chat_id)
@@ -214,17 +220,30 @@ def download_book(
 
     groups_info = res.json()["payload"]["data"]
     for group_info in groups_info:
+        # Загрузка mp3
         if "standard_quality_mp3" in group_info["file_type"]:
             files_info = group_info["files"]
             for file_info in files_info:
                 file_id = file_info["id"]
                 filename = file_info["filename"]
                 file_url = f"https://www.{LITRES_DOMAIN_NAME}/download_book_subscr/{book_id}/{file_id}/{filename}"
-                err_msg = download_mp3(
+                err_msg = download_content_file(
                     file_url, book_folder, filename, cookies, headers, progress_bar
                 )
                 if err_msg != "":
                     close_programm(err_msg, tg_api_key, tg_chat_id)
+        elif "unknown" in group_info["file_type"] and type(group_info["files"]) == type([]):
+            for file_spec in group_info["files"]:
+                if file_spec["extension"] == "fb2.zip":
+                    file_id = file_spec["id"]
+                    filename = file_spec["filename"]
+                    # file_url = f"https://www.{LITRES_DOMAIN_NAME}/download_book_subscr/{book_id}/{file_id}/json"
+                    file_url = f"https://www.{LITRES_DOMAIN_NAME}/download_book_subscr/{book_id}/{file_id}/fb2/zip"
+                    err_msg = download_content_file(
+                        file_url, book_folder, filename, cookies, headers, progress_bar
+                    )
+                    if err_msg != "":
+                        close_programm(err_msg, tg_api_key, tg_chat_id)
 
     msg = (
         f"Окончание загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
