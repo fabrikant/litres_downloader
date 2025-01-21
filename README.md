@@ -35,7 +35,7 @@ git clone https://github.com/fabrikant/litres_audiobooks_downloader.git
 ```cmd
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirement.txt
+pip install -r requirements.txt
 deactivate
 ```
 
