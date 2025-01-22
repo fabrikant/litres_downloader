@@ -322,5 +322,5 @@ if __name__ == "__main__":
         args.progressbar,
         args.cover,
         args.metadata,
-        arg.send_fb2_via_telegram,
+        args.send_fb2_via_telegram,
     )
