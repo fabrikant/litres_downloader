@@ -51,13 +51,18 @@ if __name__ == "__main__":
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         level=logging.INFO,
     )
-    parser = argparse.ArgumentParser(description=f"Извлечение cookies из браузера")
+    parser = argparse.ArgumentParser(
+        description=f(
+            "Извлечение cookies из браузера. Перед запуском нужно "
+            "в браузере войти в аккаунт litres.ru"
+        )
+    )
     parser.add_argument(
         "-b",
         "--browser",
         help=f"Браузер в котором вы авторизованы на сайте litres.ru. По умолчанию: chrome",
         default="chrome",
-        choices=["chrome", "edge", "firefox", "safari"],
+        choices=["chrome", "chromium", "vivaldi", "edge", "firefox", "safari"],
     )
     parser.add_argument(
         "--cookies-file",

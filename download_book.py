@@ -14,7 +14,7 @@ import json
 from requests.utils import cookiejar_from_dict
 
 from common import LITRES_DOMAIN_NAME, cookies_is_valid
-from tg_sender import send_to_telegram
+from tg_sender import send_to_telegram, send_file_to_telegram
 from common_arguments import create_common_args, parse_args
 
 
@@ -64,9 +64,9 @@ def download_content_file(url, path, filename, cookies, headers, progress_bar):
     else:
         err_descr = ""
         try:
-           err_descr = f"({str(res.json())})"
+            err_descr = f"({str(res.json())})"
         except:
-            pass   
+            pass
         err_msg = f"Ошибка: {res.status_code} {err_descr} файл: {url}"
         logger.error(err_msg)
         return err_msg
@@ -183,6 +183,7 @@ def download_book(
     progress_bar,
     load_cover,
     create_metadata,
+    send_fb2_via_telegram,
 ):
     headers = get_headers()
     book_id = url.split("-")[-1].split("/")[0]
@@ -232,7 +233,9 @@ def download_book(
                 )
                 if err_msg != "":
                     close_programm(err_msg, tg_api_key, tg_chat_id)
-        elif "unknown" in group_info["file_type"] and type(group_info["files"]) == type([]):
+        elif "unknown" in group_info["file_type"] and type(group_info["files"]) == type(
+            []
+        ):
             for file_spec in group_info["files"]:
                 if file_spec["extension"] == "fb2.zip":
                     file_id = file_spec["id"]
@@ -244,7 +247,13 @@ def download_book(
                     )
                     if err_msg != "":
                         close_programm(err_msg, tg_api_key, tg_chat_id)
-
+                    # Файл загружен без ошибки, попробуем отправить его в телеграм
+                    if send_fb2_via_telegram and tg_api_key != "" and tg_chat_id != "":
+                        full_filename = Path(book_folder) / filename
+                        send_file_to_telegram(full_filename, tg_api_key, tg_chat_id)
+                        # Если отправили файл в телеграм, нет смысла дополнительно
+                        # сообщать об успешной загрузке. Выходим из программы.
+                        exit(0)
     msg = (
         f"Окончание загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
     )
@@ -266,6 +275,12 @@ if __name__ == "__main__":
     )
     # Добавляем специфические аргументы для данной качалки
     parser.add_argument(
+        "--send-fb2-via-telegram",
+        help="Отправлять fb2 файлы книг через телеграм бота (требуется задать --telegram-api и --telegram-chatid)",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    parser.add_argument(
         "--progressbar",
         help="Показывать прогресс для каждого файла",
         action=argparse.BooleanOptionalAction,
@@ -273,8 +288,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--cookies-file",
-        help="Файл содержащий cookies. Нужно предварительно сформировать скриптом create-cookies.py \
-            По умолчанию: cookies.json в каталоге скрипта",
+        help=(
+            "Файл содержащий cookies. Нужно предварительно сформировать скриптом create-cookies.py "
+            "или извлечь из браузера скриптом get_browser_cookies.py"
+            "По умолчанию: cookies.json в каталоге скрипта"
+        ),
         default="cookies.json",
     )
 
@@ -304,4 +322,5 @@ if __name__ == "__main__":
         args.progressbar,
         args.cover,
         args.metadata,
+        arg.send_fb2_via_telegram,
     )
