@@ -1,5 +1,5 @@
 #! /bin/bash
-DIR=$(dirname $0)
+DIR=$(pwd $(dirname $0))
 cd $DIR
 python3 -m venv .venv
 source .venv/bin/activate
