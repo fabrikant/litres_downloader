@@ -6,13 +6,13 @@ from pathlib import Path
 from fake_useragent import UserAgent
 from tqdm import tqdm
 import shutil
-from opf import book_info_to_xml
 import re
 import sys
 import subprocess
 import json
 from requests.utils import cookiejar_from_dict
 
+from opf import book_info_to_xml, if_to_fi
 from common import LITRES_DOMAIN_NAME, cookies_is_valid
 from tg_sender import send_to_telegram, send_file_to_telegram
 from common_arguments import create_common_args, parse_args
@@ -71,17 +71,6 @@ def download_content_file(url, path, filename, cookies, headers, progress_bar):
         logger.error(err_msg)
         return err_msg
     return err_msg
-
-
-# Переворачиваем фамилию имя
-def if_to_fi(person_if):
-    split = person_if.split()
-    if len(split) == 2:
-        return f"{split[1]} {split[0]}"
-    if len(split) == 3:
-        return f"{split[2]} {split[0]} {split[1]}"
-    else:
-        return person_if
 
 
 def get_book_info(json_data):

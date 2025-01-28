@@ -28,6 +28,18 @@
 # </ns0:package>
 # """
 
+
+# Переворачиваем фамилию имя
+def if_to_fi(person_if):
+    split = person_if.split()
+    if len(split) == 2:
+        return f"{split[1]} {split[0]}"
+    if len(split) == 3:
+        return f"{split[2]} {split[0]} {split[1]}"
+    else:
+        return person_if
+
+
 def xml_element(name, value, prefix="dc:", postfix=""):
     return f"   <{prefix}{name}{postfix}>{value}</{prefix}{name}>\n"
 
