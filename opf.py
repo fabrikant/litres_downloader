@@ -51,7 +51,7 @@ def book_info_to_xml(book_info):
 
     for key in book_info:
 
-        if "author" == key or "narrator" == key:
+        if "author" == key or "narrator" == key or "chapters" == key:
             continue
 
         xml_key = key
