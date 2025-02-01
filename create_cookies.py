@@ -97,6 +97,12 @@ if __name__ == "__main__":
         help="Cookies сохранятся в этот файл. По умолчанию: cookies.json",
         default="cookies.json",
     )
+    parser.add_argument(
+        "-b",
+        "--browser",
+        help=f"Не используется оставлен для совместимости",
+        default="firefox",
+    )
     args = parser.parse_args()
 
     logger.info(args)
