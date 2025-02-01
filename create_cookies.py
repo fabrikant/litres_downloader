@@ -3,11 +3,36 @@ import logging
 import argparse
 from pathlib import Path
 import json
-
 from tg_sender import send_to_telegram
+from common import LITRES_DOMAIN_NAME, cookies_is_valid
 
-LITRES_DOMAIN_NAME = "litres.ru"
+try:
+    import cookielib
+except ImportError:
+    import http.cookiejar as cookielib
+
 logger = logging.getLogger(__name__)
+
+
+def to_cookielib_cookie(name, value, domain):
+    return cookielib.Cookie(
+        version=0,
+        name=name,
+        value=value,
+        port="80",
+        port_specified=False,
+        domain=domain,
+        domain_specified=True,
+        domain_initial_dot=False,
+        path="/",
+        path_specified=True,
+        secure=True,
+        expires=None,
+        discard=False,
+        comment=None,
+        comment_url=None,
+        rest=None,
+    )
 
 
 def create_cookies(user, password, cookies_file, tg_api_key, tg_chat_id):
@@ -35,10 +60,14 @@ def create_cookies(user, password, cookies_file, tg_api_key, tg_chat_id):
         exit(0)
         pass
 
-    Path(args.cookies_file).write_text(json.dumps({"SID": SID}))
-    msg = f"Записан файл {args.cookies_file}"
-    logger.info(msg)
-    send_to_telegram(msg, tg_api_key, tg_chat_id)
+    cookie_jar = cookielib.CookieJar()
+    cookie_jar.set_cookie(to_cookielib_cookie("SID", SID, f"www.{LITRES_DOMAIN_NAME}"))
+    err_msg = cookies_is_valid(cookie_jar, tg_api_key, tg_chat_id)
+    if err_msg == "":
+        Path(args.cookies_file).write_text(json.dumps({"SID": SID}))
+        msg = f"Записан файл {args.cookies_file}"
+        logger.info(msg)
+        send_to_telegram(msg, tg_api_key, tg_chat_id)
 
 
 if __name__ == "__main__":
