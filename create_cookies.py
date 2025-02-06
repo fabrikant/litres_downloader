@@ -36,8 +36,9 @@ def to_cookielib_cookie(name, value, domain):
 
 
 def create_cookies(user, password, cookies_file, tg_api_key, tg_chat_id):
-    url = f"https://api.{LITRES_DOMAIN_NAME}/foundation/api/auth/countries/allowed"
-    res = requests.get(url)
+    url = f"https://api.{LITRES_DOMAIN_NAME}/foundation/api/auth/login-available"
+    json_data = {"login": user}
+    res = requests.post(url, json=json_data)
     if not res.ok:
         msg = f"Oшибка {res.status_code} при обращении к URL: {url}"
         logger.error(msg)
