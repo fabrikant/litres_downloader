@@ -185,7 +185,6 @@ def download_book(
         close_programm(err_msg, tg_api_key, tg_chat_id)
 
     book_info = get_book_info(res.json()["payload"]["data"])
-    release_file_id = res.json()["payload"]["data"]["linked_arts"][0]["release_file_id"]
     msg = f"Начало загрузки книги:\n{book_info['title']}\nавтор: {book_info['author']}"
     logger.debug(msg)
     send_to_telegram(msg, tg_api_key, tg_chat_id)
