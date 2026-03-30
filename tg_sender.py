@@ -3,6 +3,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+proxies = {
+    "http": "socks5h://192.168.1.16:1080",
+    "https": "socks5h://192.168.1.16:1080",
+}
+
 
 def send_to_telegram(msg, tg_api_key, tg_chat_id):
     logger.debug(
@@ -11,7 +16,7 @@ def send_to_telegram(msg, tg_api_key, tg_chat_id):
     if len(tg_api_key) > 0 and len(tg_chat_id) > 0:
         url = f"https://api.telegram.org/bot{tg_api_key}/sendMessage"
         data = {"chat_id": tg_chat_id, "text": msg}
-        res = requests.post(url, data=data)
+        res = requests.post(url, data=data, proxies=proxies, timeout=10)
         if res.ok:
             logger.info("Отправлено сообщение в телеграм")
         else:
@@ -29,7 +34,9 @@ def send_file_to_telegram(filename, tg_api_key, tg_chat_id):
         url = f"https://api.telegram.org/bot{tg_api_key}/sendDocument"
         files = {"document": open(filename, "rb")}
         params = {"chat_id": tg_chat_id}
-        res = requests.post(url, params = params, files=files)
+        res = requests.post(
+            url, params=params, files=files, proxies=proxies, timeout=10
+        )
         if res.ok:
             logger.info(f"Отправлен файл {filename} в телеграм")
         else:
